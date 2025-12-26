@@ -42,39 +42,18 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; overscroll-behavior-y: contain; }
-        
-        /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal-content { padding: 24px; border-radius: 16px; width: 95%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; animation: fadeInUp 0.3s ease-out; }
         .modal-scroll { overflow-y: auto; padding-right: 8px; }
-        
-        /* Custom Scrollbar */
         .modal-scroll::-webkit-scrollbar { width: 6px; }
         .modal-scroll::-webkit-scrollbar-track { border-radius: 10px; background-color: #f1f1f1; }
         .dark .modal-scroll::-webkit-scrollbar-track { background-color: #1f2937; }
         .modal-scroll::-webkit-scrollbar-thumb { border-radius: 10px; background-color: #c0c0c0; }
         .dark .modal-scroll::-webkit-scrollbar-thumb { background-color: #6b7280; }
-
-        /* Mobile Sidebar Transition */
         #sidebar { transition: transform 0.3s ease-in-out; }
-        
-        /* Global Icon Animation */
         .lucide { transition: transform 0.2s ease; }
         button:hover .lucide, .group:hover .lucide { transform: scale(1.1) rotate(5deg); }
-
-        /* Pull to Refresh Spinner */
-        #pull-to-refresh {
-            position: absolute;
-            top: -50px;
-            left: 0;
-            width: 100%;
-            height: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 40;
-            transition: top 0.2s;
-        }
+        #pull-to-refresh { position: absolute; top: -50px; left: 0; width: 100%; height: 50px; display: flex; justify-content: center; align-items: center; z-index: 40; transition: top 0.2s; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 h-screen flex overflow-hidden transition-colors">
@@ -159,7 +138,6 @@
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 relative pb-24 scroll-smooth" id="scrollable-content">
-            
             <div id="admin-view-dashboard" class="space-y-6 hidden animate-fade-in-up">
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                     <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-500 rounded-2xl p-6 shadow-lg shadow-blue-500/20 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 group">
@@ -492,17 +470,12 @@
         let orders = [];
         let customers = [];
         let lastViewedRoute = localStorage.getItem('lastViewedRoute') || 'dashboard';
-        let rejectOrderId = null; // Store ID for rejection
+        let rejectOrderId = null;
         
         const API_URL = 'https://goat-user-new.vercel.app/api';
         
-        let seenOrderIds = new Set(JSON.parse(localStorage.getItem('seenOrderIds') || '[]'));
-        let seenCancelledIds = new Set(JSON.parse(localStorage.getItem('seenCancelledIds') || '[]'));
-        let previousOrderIds = new Set(JSON.parse(localStorage.getItem('previousOrderIds') || '[]'));
-        let previousStatuses = new Map(JSON.parse(localStorage.getItem('previousStatuses') || '[]'));
         let notifications = [];
 
-        // --- Custom Toast Notification System ---
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -526,7 +499,6 @@
             }, 3000);
         }
 
-        // --- Pull to Refresh Logic ---
         let touchStartY = 0;
         let touchMoveY = 0;
         const mainContent = document.getElementById('scrollable-content');
@@ -549,7 +521,6 @@
             touchStartY = 0; touchMoveY = 0;
         });
 
-        // --- Sidebar & Theme Logic ---
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
@@ -572,7 +543,6 @@
             return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
         }
 
-        // --- Modal Logic ---
         function previewImage(input) {
             const preview = document.getElementById('preview-image');
             if (input.files && input.files[0]) {
@@ -672,14 +642,12 @@
 
         function closeOrderDetailsModal() { document.getElementById('order-details-modal').style.display = 'none'; }
         
-        // --- NEW: View Proof Logic ---
         function viewProof(id) {
             document.getElementById('proof-image-el').src = `${API_URL}/admin/orders/proof/${id}`;
             document.getElementById('proof-modal').style.display = 'flex';
             lucide.createIcons();
         }
 
-        // --- NEW: Reject Logic ---
         function openRejectModal(id) {
             rejectOrderId = id;
             document.getElementById('reject-reason').value = '';
@@ -729,7 +697,6 @@
             return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
         }
 
-        // --- Data Loading ---
         async function loadData(targetRoute = lastViewedRoute) {
             ['dashboard', 'livestock', 'orders', 'customers', 'settings'].forEach(v => document.getElementById(`admin-view-${v}`)?.classList.toggle('hidden', v !== targetRoute));
             const isPulling = document.getElementById('pull-to-refresh').style.top === '20px';
@@ -767,7 +734,6 @@
             }
         }
 
-        // --- Render Functions ---
         function renderLivestock(searchQuery = '') {
             const grid = document.getElementById('livestock-grid'); if (!grid) return;
             const query = searchQuery.toLowerCase().trim();
@@ -810,7 +776,6 @@
             if (filteredOrders.length === 0) { tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No matching orders found.</td></tr>'; return; }
 
             tableBody.innerHTML = filteredOrders.map((order, index) => {
-                // Determine buttons logic
                 const hasProof = !!order.paymentProof;
                 const canReject = order.status !== 'Delivered' && order.status !== 'Cancelled' && order.status !== 'Payment Rejected';
                 const canNext = order.status !== 'Delivered' && order.status !== 'Cancelled' && order.status !== 'Payment Rejected';
@@ -883,7 +848,6 @@
             list.innerHTML = html; lucide.createIcons();
         }
 
-        // --- Core Functions ---
         function adminRouter(viewName) {
             lastViewedRoute = viewName; localStorage.setItem('lastViewedRoute', viewName);
             const titles = { dashboard: 'Dashboard', livestock: 'Livestock', orders: 'Orders', customers: 'Customers', settings: 'Settings' };
@@ -895,9 +859,6 @@
             if (window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
 
             document.querySelectorAll('.admin-nav-item').forEach(btn => {
-                if (btn.getAttribute('onclick')?.includes(viewName)) btn.classList.replace('text-gray-600', 'bg-green-600') || btn.classList.add('bg-green-600', 'text-white', 'shadow-lg');
-                else btn.classList.replace('bg-green-600', 'text-gray-600') || btn.classList.remove('bg-green-600', 'text-white', 'shadow-lg');
-                // Simplifying class toggle for brevity in logic, relying on CSS reset if needed, but manual classList management is safer:
                 if (btn.getAttribute('onclick')?.includes(viewName)) {
                      btn.classList.add('bg-green-600', 'text-white', 'shadow-lg', 'shadow-green-600/30');
                      btn.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:bg-green-50', 'dark:hover:bg-green-900/30');
@@ -948,63 +909,69 @@
             try { await fetch(`${API_URL}/admin/orders/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ status: next }) }); await loadData(lastViewedRoute); showToast(`Updated to ${next}`, "success"); } catch (e) { showToast("Error", "error"); }
         }
 
-        // --- Notifications ---
-        function addNotification(message, orderId, type = 'order') {
-            notifications.unshift({ message, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), orderId, type, read: false });
-            if (type === 'order') { seenOrderIds.add(orderId); localStorage.setItem('seenOrderIds', JSON.stringify([...seenOrderIds])); }
-            else if (type === 'cancel') { seenCancelledIds.add(orderId); localStorage.setItem('seenCancelledIds', JSON.stringify([...seenCancelledIds])); }
-            updateNotificationPreviews(); updateBell(); showToast(message, 'info');
+        // --- ADMIN NOTIFICATIONS (Server Synced) ---
+        async function fetchNotifications() {
+            try {
+                const res = await fetch(`${API_URL}/admin/notifications`);
+                const data = await res.json();
+                notifications = data.notifications || [];
+                updateNotificationPreviews();
+                updateBell();
+            } catch (e) { console.error('Failed to fetch notifications', e); }
         }
-        function removeNotification(i) { notifications.splice(i, 1); updateNotificationPreviews(); updateBell(); }
-        function clearAllNotifications() { notifications = []; updateNotificationPreviews(); document.getElementById('notification-list').innerHTML = '<p class="text-center text-gray-500 py-8">No notifications</p>'; updateBell(); }
-        function updateBell() { const b = document.getElementById('notification-badge'); const u = notifications.filter(n => !n.read).length; b.innerText = u; b.classList.toggle('hidden', u === 0); }
+
+        async function clearAllNotifications() { 
+            try {
+                await fetch(`${API_URL}/admin/notifications/clear`, { method: 'DELETE' });
+                notifications = []; 
+                updateNotificationPreviews(); 
+                document.getElementById('notification-list').innerHTML = '<p class="text-center text-gray-500 py-8">No notifications</p>'; 
+                updateBell();
+            } catch(e) { showToast('Error clearing notifications', 'error'); }
+        }
+
+        function updateBell() { 
+            const b = document.getElementById('notification-badge'); 
+            const count = notifications.length; 
+            b.innerText = count; 
+            b.classList.toggle('hidden', count === 0); 
+        }
+
         function updateNotificationPreviews() {
-            const list = (c, m) => {
-                if(!c) return;
-                c.innerHTML = notifications.length ? (m ? notifications : notifications.slice(0, 5)).map((n, i) => `
-                    <div class="p-3 rounded-xl ${n.read ? 'bg-gray-50 dark:bg-gray-700/50' : 'bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500'} flex justify-between items-start gap-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <div class="flex-1"><p class="font-medium text-sm ${n.read ? 'text-gray-700 dark:text-gray-300' : 'text-green-800 dark:text-green-300'}">${n.message}</p><p class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${n.time}</p></div>
-                        <button onclick="removeNotification(${i}); updateNotificationPreviews();" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+            const list = (container, isModal) => {
+                if(!container) return;
+                container.innerHTML = notifications.length ? (isModal ? notifications : notifications.slice(0, 5)).map((n, i) => `
+                    <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex justify-between items-start gap-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 border-l-4 ${n.type === 'error' || n.type === 'warning' ? 'border-red-500' : 'border-green-500'}">
+                        <div class="flex-1">
+                            <p class="font-medium text-sm text-gray-800 dark:text-gray-200">${n.message}</p>
+                            <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${new Date(n.createdAt).toLocaleString()}</p>
+                        </div>
                     </div>`).join('') : `<p class="text-center text-gray-500 dark:text-gray-400 py-8 text-sm">No notifications</p>`;
                 lucide.createIcons();
             };
             list(document.getElementById('settings-notification-preview'), false);
             list(document.getElementById('notification-list'), true);
         }
-        function openNotificationModal() { document.getElementById('notification-modal').style.display = 'flex'; notifications.forEach(n => n.read = true); updateNotificationPreviews(); updateBell(); }
+
+        function openNotificationModal() { 
+            document.getElementById('notification-modal').style.display = 'flex'; 
+            fetchNotifications(); // Refresh on open
+        }
+        
         function closeNotificationModal() { document.getElementById('notification-modal').style.display = 'none'; }
         document.getElementById('bell-btn').onclick = openNotificationModal;
 
-        async function checkForNewOrders() {
-            try {
-                const res = await fetch(`${API_URL}/admin/orders`);
-                const data = await res.json();
-                const currentOrders = data.orders || [];
-                const currentOrderIds = new Set(currentOrders.map(o => o._id));
-                for (const order of currentOrders) {
-                    const id = order._id;
-                    const status = order.status;
-                    if (!previousOrderIds.has(id)) {
-                        if ((status === 'Pending' || status === 'Processing') && !seenOrderIds.has(id)) addNotification(`New Order #${id.slice(-6)}: ${formatINR(order.total)}`, id, 'order');
-                    } else {
-                        const prev = previousStatuses.get(id);
-                        if (prev !== status && status === 'Cancelled' && !seenCancelledIds.has(id)) addNotification(`Order #${id.slice(-6)} Cancelled`, id, 'cancel');
-                    }
-                    previousStatuses.set(id, status);
-                }
-                previousOrderIds = currentOrderIds;
-                localStorage.setItem('previousOrderIds', JSON.stringify([...previousOrderIds]));
-                localStorage.setItem('previousStatuses', JSON.stringify([...previousStatuses.entries()]));
-            } catch (e) { console.error(e); }
-        }
-        setInterval(checkForNewOrders, 5000);
+        // Poll for notifications and new orders every 10 seconds
+        setInterval(() => {
+            fetchNotifications();
+        }, 10000);
 
         document.addEventListener('DOMContentLoaded', () => {
             const init = localStorage.getItem('lastViewedRoute') || 'dashboard';
             document.getElementById(`admin-view-${init}`)?.classList.remove('hidden');
             loadData(init);
+            fetchNotifications();
         });
     </script>
 </body>
 </html>
-
