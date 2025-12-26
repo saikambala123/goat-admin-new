@@ -46,7 +46,6 @@
         /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal-content { padding: 24px; border-radius: 16px; width: 95%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; animation: fadeInUp 0.3s ease-out; }
-        #order-details-modal .modal-content { max-width: 800px; } /* Wider modal for order details */
         .modal-scroll { overflow-y: auto; padding-right: 8px; }
         
         /* Custom Scrollbar */
@@ -470,8 +469,7 @@
         let customers = [];
         let lastViewedRoute = localStorage.getItem('lastViewedRoute') || 'dashboard';
         
-        // FIXED URL: Removed /api from the end
-        const API_URL = 'https://goat-user.vercel.app';
+        const API_URL = 'https://goat-user.vercel.app/api';
         
         let seenOrderIds = new Set(JSON.parse(localStorage.getItem('seenOrderIds') || '[]'));
         let seenCancelledIds = new Set(JSON.parse(localStorage.getItem('seenCancelledIds') || '[]'));
@@ -667,15 +665,13 @@
             document.getElementById('delivered-orders-modal').style.display = 'none';
         }
 
-        // --- MERGED ORDER DETAILS MODAL (Includes Payment Verification) ---
         function openOrderDetailsModal(id) {
             const order = orders.find(o => o._id === id);
             if (!order) return;
 
             const content = document.getElementById('order-details-content');
+            
             document.getElementById('order-details-modal').style.display = 'flex';
-
-            const proofUrl = `${API_URL}/admin/orders/proof/${id}`;
 
             let itemsHTML = '';
             for (const item of order.items || []) {
@@ -710,37 +706,6 @@
                 `;
             }
 
-            // Payment Verification Section Logic
-            let paymentSection = '';
-            if (order.status !== 'Pending' && order.status !== 'Cancelled') {
-                 paymentSection = `
-                    <div class="bg-white dark:bg-gray-700/30 p-5 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm mt-6">
-                        <h4 class="font-bold text-sm mb-3 text-gray-800 dark:text-gray-200 uppercase tracking-wide flex items-center gap-2">
-                             <i data-lucide="shield-check" class="w-4 h-4 text-blue-500"></i> Payment Verification
-                        </h4>
-                        <div class="flex flex-col items-center">
-                            <div class="w-full max-w-sm mb-4 relative group">
-                                <img src="${proofUrl}" class="w-full h-64 object-contain rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 cursor-zoom-in" onclick="window.open(this.src)" onerror="this.src='https://placehold.co/400x200?text=No+Proof+Available'">
-                                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none rounded-lg">
-                                    <span class="text-white text-xs font-bold">Click to Zoom</span>
-                                </div>
-                            </div>
-                            <div class="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
-                                ${order.status === 'Processing' || order.status === 'Payment Rejected' ? `
-                                    <button onclick="updateStatus('${order._id}', 'Shipped')" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md transition-transform active:scale-95">
-                                        Approve & Ship
-                                    </button>
-                                    <button onclick="rejectOrder('${order._id}')" class="flex-1 bg-red-50 text-red-600 border border-red-200 py-2.5 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors">
-                                        Reject Proof
-                                    </button>
-                                ` : ''}
-                                ${order.status === 'Shipped' ? `<button onclick="updateStatus('${order._id}', 'Delivered')" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700 shadow-md">Mark as Delivered</button>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                 `;
-            }
-
             content.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-2xl">
                     <div class="space-y-3">
@@ -767,8 +732,6 @@
                     </div>
                 </div>
 
-                ${paymentSection}
-
                 <div class="mt-8">
                     <h4 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-100 flex items-center gap-2">
                          <i data-lucide="package" class="w-5 h-5 text-gray-500"></i> Ordered Items
@@ -790,8 +753,7 @@
                 Processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
                 Shipped: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
                 Delivered: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-                Cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-                'Payment Rejected': 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                Cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
             };
             return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
         }
@@ -819,9 +781,6 @@
             }
 
             try {
-                // Debugging: Log URLs being fetched
-                console.log(`Fetching: ${API_URL}/admin/livestock`);
-                
                 const [livestockRes, ordersRes, usersRes] = await Promise.all([
                     fetch(`${API_URL}/admin/livestock`).then(res => res.json()),
                     fetch(`${API_URL}/admin/orders`).then(res => res.json()),
@@ -954,12 +913,9 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        ${order.status === 'Processing' || order.status === 'Payment Rejected' ? 
-                            `<button onclick="openOrderDetailsModal('${order._id}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-xs font-bold border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">Verify Payment &rarr;</button>` : 
-                            `<button onclick="nextStatus('${order._id}', '${order.status}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${order.status === 'Delivered' || order.status === 'Cancelled' ? 'disabled' : ''}>
-                                ${order.status === 'Delivered' ? 'Completed' : order.status === 'Cancelled' ? 'Cancelled' : 'Next Step &rarr;'}
-                            </button>`
-                        }
+                        <button onclick="nextStatus('${order._id}', '${order.status}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${order.status === 'Delivered' || order.status === 'Cancelled' ? 'disabled' : ''}>
+                            ${order.status === 'Delivered' ? 'Completed' : order.status === 'Cancelled' ? 'Cancelled' : 'Next Step &rarr;'}
+                        </button>
                     </td>
                 </tr>
             `).join('');
@@ -1184,52 +1140,23 @@
             }
         }
 
-        // --- MERGED ORDER ACTIONS ---
         async function nextStatus(id, currentStatus) {
             let next = 'Processing';
-            if (currentStatus === 'Processing' || currentStatus === 'Payment Rejected') next = 'Shipped';
+            if (currentStatus === 'Processing') next = 'Shipped';
             else if (currentStatus === 'Shipped') next = 'Delivered';
             else return;
 
-            await updateStatus(id, next);
-        }
-
-        async function updateStatus(id, status) {
             try {
                 await fetch(`${API_URL}/admin/orders/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: status })
+                    body: JSON.stringify({ status: next })
                 });
                 await loadData(lastViewedRoute);
-                
-                // Close modal if open
-                const modal = document.getElementById('order-details-modal');
-                if(modal.style.display === 'flex') closeOrderDetailsModal();
-
-                showToast(`Order updated to ${status}`, "success");
+                showToast(`Order updated to ${next}`, "success");
             } catch (error) {
                 console.error("Error updating order:", error);
                 showToast("Error updating order.", "error");
-            }
-        }
-
-        async function rejectOrder(id) {
-            const reason = prompt("Enter rejection reason (e.g. Blurry image, Wrong amount):");
-            if(!reason) return;
-            
-            try {
-                await fetch(`${API_URL}/admin/orders/${id}/reject`, { 
-                    method: 'PUT', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({reason}) 
-                });
-                closeOrderDetailsModal();
-                await loadData(lastViewedRoute);
-                showToast('Payment Rejected. User notified.', 'warning');
-            } catch (error) {
-                console.error("Error rejecting order:", error);
-                showToast("Error rejecting order", "error");
             }
         }
 
@@ -1361,3 +1288,4 @@
     </script>
 </body>
 </html>
+
