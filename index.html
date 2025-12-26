@@ -267,9 +267,9 @@
                                 <tr>
                                     <th class="px-6 py-4">ID</th>
                                     <th class="px-6 py-4">Customer</th>
+                                    <th class="px-6 py-4">Date</th>
                                     <th class="px-6 py-4">Amount</th>
                                     <th class="px-6 py-4">Status</th>
-                                    <th class="px-6 py-4 text-center">Proof</th>
                                     <th class="px-6 py-4 text-right">Action</th>
                                 </tr>
                             </thead>
@@ -462,39 +462,14 @@
             </div>
         </div>
     </div>
-    
-    <div id="proof-modal" class="modal">
-        <div class="modal-content bg-white dark:bg-gray-800 !w-11/12 max-w-xl">
-             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100">Payment Proof</h3>
-                <button onclick="document.getElementById('proof-modal').style.display='none'" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"><i data-lucide="x" class="w-6 h-6"></i></button>
-            </div>
-            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex items-center justify-center overflow-hidden">
-                <img id="proof-image-el" src="" alt="Proof" class="max-w-full max-h-[70vh] object-contain rounded-lg">
-            </div>
-        </div>
-    </div>
-
-    <div id="reject-modal" class="modal">
-        <div class="modal-content bg-white dark:bg-gray-800 !w-11/12 max-w-md">
-            <h3 class="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Reject Payment</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Please provide a reason for rejecting this payment. The user will be notified.</p>
-            <textarea id="reject-reason" rows="3" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 outline-none" placeholder="E.g., Invalid screenshot, blurred image..."></textarea>
-            <div class="mt-6 flex justify-end gap-3">
-                <button onclick="document.getElementById('reject-modal').style.display='none'" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 font-medium">Cancel</button>
-                <button onclick="confirmReject()" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 shadow-lg shadow-red-500/30">Reject Order</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         let livestock = [];
         let orders = [];
         let customers = [];
         let lastViewedRoute = localStorage.getItem('lastViewedRoute') || 'dashboard';
-        let rejectOrderId = null; // Store ID for rejection
         
-        const API_URL = 'https://goat-user-new.vercel.app/api';
+        const API_URL = 'https://goat-user.vercel.app/api';
         
         let seenOrderIds = new Set(JSON.parse(localStorage.getItem('seenOrderIds') || '[]'));
         let seenCancelledIds = new Set(JSON.parse(localStorage.getItem('seenCancelledIds') || '[]'));
@@ -506,18 +481,32 @@
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
+            
+            // Colors based on type
             let bgClass = 'bg-gray-800 dark:bg-white text-white dark:text-gray-900';
             let icon = 'info';
             
-            if (type === 'success') { bgClass = 'bg-green-600 text-white'; icon = 'check-circle'; } 
-            else if (type === 'error') { bgClass = 'bg-red-600 text-white'; icon = 'alert-triangle'; } 
-            else if (type === 'warning') { bgClass = 'bg-yellow-500 text-white'; icon = 'alert-circle'; }
+            if (type === 'success') {
+                bgClass = 'bg-green-600 text-white';
+                icon = 'check-circle';
+            } else if (type === 'error') {
+                bgClass = 'bg-red-600 text-white';
+                icon = 'alert-triangle';
+            } else if (type === 'warning') {
+                bgClass = 'bg-yellow-500 text-white';
+                icon = 'alert-circle';
+            }
 
             toast.className = `${bgClass} px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-toast-slide min-w-[300px] pointer-events-auto`;
-            toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i><span class="font-medium text-sm">${message}</span>`;
+            toast.innerHTML = `
+                <i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="font-medium text-sm">${message}</span>
+            `;
+
             container.appendChild(toast);
             lucide.createIcons();
 
+            // Auto remove after 3 seconds
             setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateX(100%)';
@@ -532,59 +521,104 @@
         const mainContent = document.getElementById('scrollable-content');
         const spinner = document.getElementById('pull-to-refresh');
 
-        mainContent.addEventListener('touchstart', (e) => { if (mainContent.scrollTop === 0) touchStartY = e.touches[0].clientY; }, { passive: true });
+        mainContent.addEventListener('touchstart', (e) => {
+            if (mainContent.scrollTop === 0) {
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
         mainContent.addEventListener('touchmove', (e) => {
             if (mainContent.scrollTop === 0) {
                 touchMoveY = e.touches[0].clientY;
                 const diff = touchMoveY - touchStartY;
-                if (diff > 0 && diff < 150) spinner.style.top = `${diff/2 - 25}px`;
+                if (diff > 0 && diff < 150) {
+                    spinner.style.top = `${diff/2 - 25}px`;
+                }
             }
         }, { passive: true });
+
         mainContent.addEventListener('touchend', async () => {
             if (mainContent.scrollTop === 0 && (touchMoveY - touchStartY) > 80) {
-                spinner.style.top = '20px';
+                // Trigger refresh
+                spinner.style.top = '20px'; // Hold spinner position
                 await loadData(lastViewedRoute);
-                setTimeout(() => { spinner.style.top = '-50px'; }, 500);
-            } else { spinner.style.top = '-50px'; }
-            touchStartY = 0; touchMoveY = 0;
+                setTimeout(() => {
+                    spinner.style.top = '-50px';
+                }, 500);
+            } else {
+                 spinner.style.top = '-50px';
+            }
+            touchStartY = 0;
+            touchMoveY = 0;
         });
 
-        // --- Sidebar & Theme Logic ---
+        // --- Sidebar Logic ---
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
-            if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); } 
-            else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
         }
 
+        // --- THEME SWITCHING LOGIC ---
         const htmlEl = document.documentElement;
         const themeToggleBtn = document.getElementById('theme-toggle');
+
         function setTheme(theme) {
-            if (theme === 'dark') { htmlEl.classList.add('dark'); localStorage.setItem('theme', 'dark'); } 
-            else { htmlEl.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
+            if (theme === 'dark') {
+                htmlEl.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                htmlEl.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
             lucide.createIcons();
         }
+
         const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) setTheme(savedTheme); else if (window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark'); else setTheme('light');
-        if (themeToggleBtn) themeToggleBtn.addEventListener('click', () => setTheme(htmlEl.classList.contains('dark') ? 'light' : 'dark'));
+        if (savedTheme) {
+            setTheme(savedTheme);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            setTheme('dark');
+        } else {
+            setTheme('light');
+        }
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                setTheme(htmlEl.classList.contains('dark') ? 'light' : 'dark');
+            });
+        }
 
         function formatINR(amount) {
             return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
         }
 
-        // --- Modal Logic ---
         function previewImage(input) {
             const preview = document.getElementById('preview-image');
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                reader.onload = e => { preview.src = e.target.result; preview.classList.remove('hidden'); preview.classList.add('block', 'animate-fade-in-up'); }
+                reader.onload = e => {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    preview.classList.add('block', 'animate-fade-in-up');
+                }
                 reader.readAsDataURL(input.files[0]);
             }
         }
 
         function openLivestockModal(isEdit = false, id = null) {
             let item = null;
-            if (isEdit && id) { item = livestock.find(i => i._id === id); if (!item) return; }
+            if (isEdit && id) {
+                item = livestock.find(i => i._id === id);
+                if (!item) return;
+            }
             const modal = document.getElementById('livestock-modal');
             const title = document.querySelector('#livestock-modal h3');
             const btn = document.getElementById('save-livestock-btn');
@@ -601,36 +635,63 @@
                 let w = item.weight || item.age || '';
                 if(w && w.toString().toLowerCase().includes('kg')) w = w.replace(/kg/gi, '').trim();
                 document.getElementById('new-weight').value = w;
+                
                 document.getElementById('new-price').value = item.price;
                 document.getElementById('new-status').value = item.status;
                 document.getElementById('new-tags').value = item.tags || '';
                 preview.src = `${API_URL}/livestock/image/${item._id}`;
-                preview.classList.remove('hidden'); preview.classList.add('block');
+                preview.classList.remove('hidden');
+                preview.classList.add('block');
             } else {
                 document.querySelector('#livestock-modal form').reset();
-                preview.classList.add('hidden'); preview.classList.remove('block');
+                preview.classList.add('hidden');
+                preview.classList.remove('block');
             }
+
             modal.style.display = 'flex';
         }
 
-        function closeLivestockModal() { document.getElementById('livestock-modal').style.display = 'none'; }
-        
-        function openDeliveredOrdersModal() { renderDeliveredOrders(); document.getElementById('delivered-orders-modal').style.display = 'flex'; lucide.createIcons(); }
-        function closeDeliveredOrdersModal() { document.getElementById('delivered-orders-modal').style.display = 'none'; }
+        function closeLivestockModal() {
+            document.getElementById('livestock-modal').style.display = 'none';
+        }
+
+        function openDeliveredOrdersModal() {
+            renderDeliveredOrders();
+            document.getElementById('delivered-orders-modal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function closeDeliveredOrdersModal() {
+            document.getElementById('delivered-orders-modal').style.display = 'none';
+        }
 
         function openOrderDetailsModal(id) {
-            const order = orders.find(o => o._id === id); if (!order) return;
+            const order = orders.find(o => o._id === id);
+            if (!order) return;
+
             const content = document.getElementById('order-details-content');
+            
             document.getElementById('order-details-modal').style.display = 'flex';
 
             let itemsHTML = '';
             for (const item of order.items || []) {
                 const fullItem = livestock.find(l => l._id === item._id) || item;
-                let displayWeight = (fullItem.weight || fullItem.age || 'N/A').toString().replace('kg','').trim() + ' kg';
+
+                let rawWeight = fullItem.weight || fullItem.age || 'N/A';
+                let displayWeight = rawWeight;
+                if (!isNaN(rawWeight)) {
+                    displayWeight = rawWeight + ' kg';
+                } else if (typeof rawWeight === 'string' && !rawWeight.toLowerCase().includes('kg') && rawWeight !== 'N/A') {
+                    displayWeight = rawWeight + ' kg';
+                }
+
                 itemsHTML += `
                     <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-100 dark:border-gray-600 flex flex-col sm:flex-row gap-4 animate-slide-in-right hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                         <div class="w-full sm:w-28 h-28 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm group">
-                            <img src="${API_URL}/livestock/image/${item._id}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.src='https://via.placeholder.com/150?text=No+Image';">
+                            <img src="${API_URL}/livestock/image/${item._id}" 
+                                alt="${fullItem.name || 'Unknown'}" 
+                                class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                onerror="this.src='https://via.placeholder.com/150?text=No+Image';">
                         </div>
                         <div class="flex-1">
                             <h4 class="font-bold text-lg text-gray-800 dark:text-gray-100">${fullItem.name || 'Unknown'}</h4>
@@ -641,7 +702,8 @@
                             </div>
                             <p class="text-xl font-bold text-green-600 dark:text-green-400 mt-3">${formatINR(fullItem.price || item.price)}</p>
                         </div>
-                    </div>`;
+                    </div>
+                `;
             }
 
             content.innerHTML = `
@@ -651,9 +713,10 @@
                         <div><p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Date</p><p class="font-medium text-gray-800 dark:text-gray-100">${new Date(order.date).toLocaleString()}</p></div>
                         <div><p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Customer</p><p class="font-medium text-gray-800 dark:text-gray-100">${order.customer}</p></div>
                         <div><p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Status</p>
-                            <span class="inline-flex items-center gap-1.5 py-1 px-3 mt-1 rounded-full text-xs font-bold ${getStatusColor(order.status)}">${order.status}</span>
+                            <span class="inline-flex items-center gap-1.5 py-1 px-3 mt-1 rounded-full text-xs font-bold ${getStatusColor(order.status)}">
+                                ${order.status}
+                            </span>
                         </div>
-                        ${order.status === 'Payment Rejected' ? `<div><p class="text-xs text-red-500 uppercase font-semibold">Rejection Reason</p><p class="font-bold text-red-600">${order.rejectionReason || 'N/A'}</p></div>` : ''}
                     </div>
                     <div class="space-y-3">
                         <div><p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Shipping Address</p>
@@ -661,60 +724,27 @@
                             <p class="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">${order.address?.line1 || ''}, ${order.address?.city || ''}, ${order.address?.state || ''} - ${order.address?.pincode || ''}</p>
                         </div>
                         <div class="pt-4 border-t border-gray-200 dark:border-gray-600 mt-2">
-                            <div class="flex justify-between text-lg font-bold"><span>Total Amount</span><span class="text-green-600 dark:text-green-400">${formatINR(order.total)}</span></div>
+                            <div class="flex justify-between text-lg font-bold">
+                                <span>Total Amount</span>
+                                <span class="text-green-600 dark:text-green-400">${formatINR(order.total)}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="mt-8"><h4 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-100 flex items-center gap-2"><i data-lucide="package" class="w-5 h-5 text-gray-500"></i> Ordered Items</h4><div class="space-y-4">${itemsHTML || '<p class="text-gray-500 text-center py-4">No items found.</p>'}</div></div>
+
+                <div class="mt-8">
+                    <h4 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                         <i data-lucide="package" class="w-5 h-5 text-gray-500"></i> Ordered Items
+                    </h4>
+                    <div class="space-y-4">${itemsHTML || '<p class="text-gray-500 text-center py-4">No items found.</p>'}</div>
+                </div>
             `;
+
             lucide.createIcons();
         }
 
-        function closeOrderDetailsModal() { document.getElementById('order-details-modal').style.display = 'none'; }
-        
-        // --- NEW: View Proof Logic ---
-        function viewProof(id) {
-            document.getElementById('proof-image-el').src = `${API_URL}/admin/orders/proof/${id}`;
-            document.getElementById('proof-modal').style.display = 'flex';
-            lucide.createIcons();
-        }
-
-        // --- NEW: Reject Logic ---
-        function openRejectModal(id) {
-            rejectOrderId = id;
-            document.getElementById('reject-reason').value = '';
-            document.getElementById('reject-modal').style.display = 'flex';
-        }
-
-        async function confirmReject() {
-            if(!rejectOrderId) return;
-            const reason = document.getElementById('reject-reason').value.trim();
-            if(!reason) return showToast('Please enter a reason', 'warning');
-
-            const btn = document.querySelector('#reject-modal button.bg-red-600');
-            const originalText = btn.innerText;
-            btn.innerText = 'Rejecting...';
-            btn.disabled = true;
-
-            try {
-                const res = await fetch(`${API_URL}/admin/orders/${rejectOrderId}/reject`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reason })
-                });
-                if(!res.ok) throw new Error('Failed to reject');
-                
-                showToast('Order Rejected & User Notified', 'success');
-                document.getElementById('reject-modal').style.display = 'none';
-                await loadData(lastViewedRoute);
-            } catch(e) {
-                console.error(e);
-                showToast('Error rejecting order', 'error');
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-                rejectOrderId = null;
-            }
+        function closeOrderDetailsModal() {
+            document.getElementById('order-details-modal').style.display = 'none';
         }
 
         function getStatusColor(status) {
@@ -723,19 +753,30 @@
                 Processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
                 Shipped: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
                 Delivered: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-                Cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-                'Payment Rejected': 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                Cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
             };
             return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
         }
 
-        // --- Data Loading ---
         async function loadData(targetRoute = lastViewedRoute) {
-            ['dashboard', 'livestock', 'orders', 'customers', 'settings'].forEach(v => document.getElementById(`admin-view-${v}`)?.classList.toggle('hidden', v !== targetRoute));
+            ['dashboard', 'livestock', 'orders', 'customers', 'settings'].forEach(v => {
+                const el = document.getElementById(`admin-view-${v}`);
+                if (el) el.classList.toggle('hidden', v !== targetRoute);
+            });
+
+            // Only show full loading overlay if NOT pulling to refresh
             const isPulling = document.getElementById('pull-to-refresh').style.top === '20px';
+            
             const mainContainer = document.querySelector('main .flex-1.overflow-y-auto');
             if (mainContainer && !document.getElementById('loading-overlay') && !isPulling) {
-                mainContainer.insertAdjacentHTML('afterbegin', `<div id="loading-overlay" class="absolute inset-0 bg-white/80 dark:bg-gray-900/90 flex items-center justify-center z-50 backdrop-blur-sm transition-opacity"><div class="text-center animate-pulse"><i data-lucide="loader-2" class="w-12 h-12 text-green-600 dark:text-green-400 animate-spin mx-auto"></i><p class="mt-4 text-sm font-semibold text-gray-600 dark:text-gray-300 tracking-wide uppercase">Loading Data...</p></div></div>`);
+                mainContainer.insertAdjacentHTML('afterbegin', `
+                    <div id="loading-overlay" class="absolute inset-0 bg-white/80 dark:bg-gray-900/90 flex items-center justify-center z-50 backdrop-blur-sm transition-opacity">
+                        <div class="text-center animate-pulse">
+                            <i data-lucide="loader-2" class="w-12 h-12 text-green-600 dark:text-green-400 animate-spin mx-auto"></i>
+                            <p class="mt-4 text-sm font-semibold text-gray-600 dark:text-gray-300 tracking-wide uppercase">Loading Data...</p>
+                        </div>
+                    </div>
+                `);
                 lucide.createIcons();
             }
 
@@ -745,20 +786,32 @@
                     fetch(`${API_URL}/admin/orders`).then(res => res.json()),
                     fetch(`${API_URL}/admin/users`).then(res => res.json())
                 ]);
+
                 livestock = livestockRes.livestock || [];
                 orders = ordersRes.orders || [];
                 customers = usersRes.users || [];
                 
                 document.getElementById('stat-livestock').innerText = livestock.length;
                 document.getElementById('stat-orders').innerText = orders.length;
+                
                 const totalRevenue = orders.filter(o => o.status === 'Delivered').reduce((sum, order) => sum + (order.total || 0), 0);
                 document.getElementById('stat-revenue').innerText = formatINR(totalRevenue);
                 document.getElementById('settings-revenue').innerText = formatINR(totalRevenue);
-                if(document.getElementById('stat-goats')) document.getElementById('stat-goats').innerText = livestock.filter(l => l.type === 'Goat').length;
-                if(document.getElementById('stat-sheep')) document.getElementById('stat-sheep').innerText = livestock.filter(l => l.type === 'Sheep').length;
+
+                // --- Goats and Sheep Inventory ---
+                const goatCount = livestock.filter(l => l.type === 'Goat').length;
+                const sheepCount = livestock.filter(l => l.type === 'Sheep').length;
+                
+                const goatEl = document.getElementById('stat-goats');
+                const sheepEl = document.getElementById('stat-sheep');
+                
+                if(goatEl) goatEl.innerText = goatCount;
+                if(sheepEl) sheepEl.innerText = sheepCount;
+                // --------------------------------------
 
                 document.getElementById('loading-overlay')?.remove();
                 adminRouter(targetRoute);
+
             } catch (error) {
                 console.error("Error loading data:", error);
                 document.getElementById('loading-overlay')?.remove();
@@ -766,100 +819,136 @@
                 adminRouter(targetRoute);
             }
         }
-
-        // --- Render Functions ---
+        
         function renderLivestock(searchQuery = '') {
-            const grid = document.getElementById('livestock-grid'); if (!grid) return;
+            const grid = document.getElementById('livestock-grid');
+            if (!grid) return;
+            
             const query = searchQuery.toLowerCase().trim();
-            const filteredLivestock = livestock.filter(item => query === '' || item.name.toLowerCase().includes(query) || item.type.toLowerCase().includes(query) || item.breed.toLowerCase().includes(query));
-            if (filteredLivestock.length === 0) { grid.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center text-center p-12 text-gray-500 dark:text-gray-400"><i data-lucide="package-open" class="w-12 h-12 mb-4 opacity-50"></i><p>No matching livestock found.</p></div>'; lucide.createIcons(); return; }
+            const filteredLivestock = livestock.filter(item => 
+                query === '' || 
+                item.name.toLowerCase().includes(query) ||
+                item.type.toLowerCase().includes(query) ||
+                item.breed.toLowerCase().includes(query)
+            );
+
+            if (filteredLivestock.length === 0) {
+                grid.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center text-center p-12 text-gray-500 dark:text-gray-400"><i data-lucide="package-open" class="w-12 h-12 mb-4 opacity-50"></i><p>No matching livestock found.</p></div>';
+                lucide.createIcons();
+                return;
+            }
 
             grid.innerHTML = filteredLivestock.map((item, index) => {
-                let displayW = (item.weight || item.age || 'N/A').toString().replace('kg','').trim() + ' kg';
+                let rawW = item.weight || item.age || 'N/A';
+                let displayW = (!isNaN(rawW) || (typeof rawW === 'string' && !rawW.toLowerCase().includes('kg'))) ? rawW + ' kg' : rawW;
+
                 return `
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm relative group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-fade-in-up" style="animation-delay: ${index * 50}ms">
                     <div class="h-48 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden relative mb-4">
-                        <img src="${API_URL}/livestock/image/${item._id}" alt="${item.name}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" onerror="this.src='https://via.placeholder.com/300?text=No+Image';">
+                        <img src="${API_URL}/livestock/image/${item._id}" alt="${item.name}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" onerror="this.src='https://via.placeholder.com/300?text=No+Image'; this.onerror=null;">
                         <span class="absolute top-3 right-3 bg-white/90 dark:bg-black/70 backdrop-blur-sm text-gray-800 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-bold shadow-sm">${item.status}</span>
                     </div>
+                    
                     <div class="space-y-2 mb-4 px-1">
-                         <div class="flex justify-between items-start"><h3 class="font-bold text-lg text-gray-900 dark:text-white truncate">${item.name}</h3></div>
+                         <div class="flex justify-between items-start">
+                             <h3 class="font-bold text-lg text-gray-900 dark:text-white truncate">${item.name}</h3>
+                         </div>
                          <div class="grid grid-cols-2 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
                              <p class="flex items-center gap-1"><i data-lucide="dna" class="w-3 h-3"></i> ${item.breed}</p>
                              <p class="flex items-center gap-1"><i data-lucide="tag" class="w-3 h-3"></i> ${item.type}</p>
                              <p class="flex items-center gap-1"><i data-lucide="scale" class="w-3 h-3"></i> ${displayW}</p>
                          </div>
                     </div>
+
                     <div class="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
                         <span class="text-xl font-bold text-green-600 dark:text-green-400">${formatINR(item.price)}</span>
                         <div class="flex gap-2">
-                            <button onclick="openLivestockModal(true, '${item._id}')" class="bg-blue-600 text-white p-2 rounded-lg text-sm hover:bg-blue-700 transition shadow-sm"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                            <button onclick="removeItem('${item._id}')" class="bg-red-600 text-white p-2 rounded-lg text-sm hover:bg-red-700 transition shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            <button onclick="openLivestockModal(true, '${item._id}')" class="bg-blue-600 text-white p-2 rounded-lg text-sm hover:bg-blue-700 transition shadow-sm" title="Edit">
+                                <i data-lucide="edit-2" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="removeItem('${item._id}')" class="bg-red-600 text-white p-2 rounded-lg text-sm hover:bg-red-700 transition shadow-sm" title="Remove">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
                         </div>
                     </div>
-                </div>`;
-            }).join('');
+                </div>
+            `}).join('');
             lucide.createIcons();
         }
         
+        function searchLivestock() {
+            const searchInput = document.getElementById('livestock-search-input');
+            if (searchInput) renderLivestock(searchInput.value);
+        }
+        
         function renderOrders(searchQuery = '') {
-            const tableBody = document.getElementById('orders-table-body'); if (!tableBody) return;
+            const tableBody = document.getElementById('orders-table-body');
+            if (!tableBody) return;
+
             const query = searchQuery.toLowerCase().trim();
-            const filteredOrders = orders.filter(order => query === '' || order.customer.toLowerCase().includes(query) || order._id.slice(-6).toLowerCase().includes(query));
+            const filteredOrders = orders.filter(order => 
+                query === '' || 
+                order.customer.toLowerCase().includes(query) ||
+                order._id.slice(-6).toLowerCase().includes(query)
+            );
 
-            if (filteredOrders.length === 0) { tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No matching orders found.</td></tr>'; return; }
+            if (filteredOrders.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No matching orders found.</td></tr>';
+                return;
+            }
 
-            tableBody.innerHTML = filteredOrders.map((order, index) => {
-                // Determine buttons logic
-                const hasProof = !!order.paymentProof;
-                const canReject = order.status !== 'Delivered' && order.status !== 'Cancelled' && order.status !== 'Payment Rejected';
-                const canNext = order.status !== 'Delivered' && order.status !== 'Cancelled' && order.status !== 'Payment Rejected';
-
-                return `
+            tableBody.innerHTML = filteredOrders.map((order, index) => `
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors animate-fade-in-up" style="animation-delay: ${index * 50}ms">
                     <td class="px-6 py-4">
                         <span class="font-bold text-gray-800 dark:text-gray-100 font-mono">#${order._id.slice(-6)}</span><br>
                         <button onclick="openOrderDetailsModal('${order._id}')" class="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 font-medium">View Details</button>
                     </td>
                     <td class="px-6 py-4 font-medium text-gray-800 dark:text-gray-200">${order.customer}</td>
+                    <td class="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm">${new Date(order.date).toLocaleDateString()}</td>
                     <td class="px-6 py-4 font-bold text-green-600 dark:text-green-400">${formatINR(order.total)}</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-bold shadow-sm ${getStatusColor(order.status)}">
-                            <span class="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>${order.status}
+                            <span class="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
+                            ${order.status}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-center">
-                        ${hasProof ? 
-                        `<button onclick="viewProof('${order._id}')" class="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-2 rounded-lg transition" title="View Payment Proof">
-                            <i data-lucide="image" class="w-5 h-5"></i>
-                         </button>` : 
-                         `<span class="text-xs text-gray-400">No Proof</span>`
-                        }
-                    </td>
-                    <td class="px-6 py-4 text-right flex justify-end gap-2">
-                        ${canReject ? 
-                        `<button onclick="openRejectModal('${order._id}')" class="text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-lg transition text-xs font-bold border border-red-200 dark:border-red-800" title="Reject Payment">
-                           Reject
-                        </button>` : ''}
-                        
-                        <button onclick="nextStatus('${order._id}', '${order.status}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${!canNext ? 'disabled' : ''}>
-                            ${order.status === 'Delivered' ? 'Completed' : order.status === 'Cancelled' ? 'Cancelled' : order.status === 'Payment Rejected' ? 'Rejected' : 'Next Step &rarr;'}
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="nextStatus('${order._id}', '${order.status}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${order.status === 'Delivered' || order.status === 'Cancelled' ? 'disabled' : ''}>
+                            ${order.status === 'Delivered' ? 'Completed' : order.status === 'Cancelled' ? 'Cancelled' : 'Next Step &rarr;'}
                         </button>
                     </td>
                 </tr>
-            `}).join('');
+            `).join('');
             lucide.createIcons();
         }
 
+        function searchOrders() {
+            const searchInput = document.getElementById('order-search-input');
+            if (searchInput) renderOrders(searchInput.value);
+        }
+
         function renderCustomers(searchQuery = '') {
-            const tableBody = document.getElementById('customers-table-body'); if (!tableBody) return;
+            const tableBody = document.getElementById('customers-table-body');
+            if (!tableBody) return;
+            
             const query = searchQuery.toLowerCase().trim();
-            const filtered = customers.filter(u => query === '' || u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query));
-            if (filtered.length === 0) { tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No matching customers found.</td></tr>'; return; }
-            tableBody.innerHTML = filtered.map((user, index) => `
+            const filteredCustomers = customers.filter(user => 
+                query === '' || 
+                user.name.toLowerCase().includes(query) || 
+                user.email.toLowerCase().includes(query)
+            );
+
+            if (filteredCustomers.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No matching customers found.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = filteredCustomers.map((user, index) => `
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors animate-fade-in-up" style="animation-delay: ${index * 50}ms">
                     <td class="px-6 py-4 flex items-center gap-3">
-                        <div class="w-9 h-9 bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-sm flex-shrink-0">${user.name.charAt(0).toUpperCase()}</div>
+                        <div class="w-9 h-9 bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-sm flex-shrink-0">
+                            ${user.name.charAt(0).toUpperCase()}
+                        </div>
                         <span class="font-medium text-gray-800 dark:text-gray-100">${user.name}</span>
                     </td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300 text-sm">${user.email}</td>
@@ -869,110 +958,292 @@
             `).join('');
             lucide.createIcons();
         }
-        
-        function renderDeliveredOrders() {
-            const delivered = orders.filter(o => o.status === 'Delivered');
-            const list = document.getElementById('delivered-orders-list');
-            if (delivered.length === 0) { list.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 p-8 border border-dashed dark:border-gray-600 rounded-lg">No successful deliveries found yet.</p>'; return; }
-            const byCustomer = delivered.reduce((acc, o) => { const n = o.customer || 'Unknown'; if (!acc[n]) acc[n] = []; acc[n].push(o); return acc; }, {});
-            let html = '';
-            for (const name in byCustomer) {
-                const total = byCustomer[name].reduce((sum, o) => sum + (o.total || 0), 0);
-                html += `<div class="bg-gray-50 dark:bg-gray-700/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700"><div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-600 mb-3"><h4 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4 text-green-500"></i> ${name}</h4><span class="text-lg font-bold text-green-600 dark:text-green-400">${formatINR(total)}</span></div><ul class="space-y-2">${byCustomer[name].map(o => `<li class="flex justify-between text-sm text-gray-600 dark:text-gray-300 py-1 hover:bg-white dark:hover:bg-gray-600 px-2 rounded transition-colors"><span class="font-mono text-gray-500">#${o._id.slice(-6)}</span><span class="text-xs text-gray-400">${new Date(o.date).toLocaleDateString()}</span><span class="font-medium text-gray-800 dark:text-gray-100">${formatINR(o.total)}</span></li>`).join('')}</ul></div>`;
-            }
-            list.innerHTML = html; lucide.createIcons();
+
+        function searchCustomers() {
+            const searchInput = document.getElementById('customer-search-input');
+            if (searchInput) renderCustomers(searchInput.value);
         }
 
-        // --- Core Functions ---
-        function adminRouter(viewName) {
-            lastViewedRoute = viewName; localStorage.setItem('lastViewedRoute', viewName);
-            const titles = { dashboard: 'Dashboard', livestock: 'Livestock', orders: 'Orders', customers: 'Customers', settings: 'Settings' };
-            document.getElementById('admin-page-title').innerText = titles[viewName];
-            ['dashboard', 'livestock', 'orders', 'customers', 'settings'].forEach(v => document.getElementById(`admin-view-${v}`)?.classList.toggle('hidden', v !== viewName));
+        function renderDeliveredOrders() {
+            const deliveredOrders = orders.filter(o => o.status === 'Delivered');
+            const listContainer = document.getElementById('delivered-orders-list');
             
+            if (deliveredOrders.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 p-8 border border-dashed dark:border-gray-600 rounded-lg">No successful deliveries found yet.</p>';
+                return;
+            }
+
+            const ordersByCustomer = deliveredOrders.reduce((acc, order) => {
+                const customerName = order.customer || 'Unknown Customer';
+                if (!acc[customerName]) acc[customerName] = [];
+                acc[customerName].push(order);
+                return acc;
+            }, {});
+
+            let html = '';
+            for (const customerName in ordersByCustomer) {
+                const customerOrders = ordersByCustomer[customerName];
+                const customerTotal = customerOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+
+                html += `
+                    <div class="bg-gray-50 dark:bg-gray-700/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-600 mb-3">
+                            <h4 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                                <i data-lucide="user-check" class="w-4 h-4 text-green-500"></i> ${customerName}
+                            </h4>
+                            <span class="text-lg font-bold text-green-600 dark:text-green-400">${formatINR(customerTotal)}</span>
+                        </div>
+                        <ul class="space-y-2">
+                            ${customerOrders.map(order => `
+                                <li class="flex justify-between text-sm text-gray-600 dark:text-gray-300 py-1 hover:bg-white dark:hover:bg-gray-600 px-2 rounded transition-colors">
+                                    <span class="font-mono text-gray-500">#${order._id.slice(-6)}</span>
+                                    <span class="text-xs text-gray-400">${new Date(order.date).toLocaleDateString()}</span>
+                                    <span class="font-medium text-gray-800 dark:text-gray-100">${formatINR(order.total)}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            listContainer.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function adminRouter(viewName) {
+            lastViewedRoute = viewName;
+            localStorage.setItem('lastViewedRoute', viewName);
+            
+            const titles = { dashboard: 'Dashboard', livestock: 'Livestock', orders: 'Orders', customers: 'Customers', settings: 'Settings' };
+            const titleEl = document.getElementById('admin-page-title');
+            if (titleEl) titleEl.innerText = titles[viewName];
+
+            ['dashboard', 'livestock', 'orders', 'customers', 'settings'].forEach(v => 
+                document.getElementById(`admin-view-${v}`)?.classList.toggle('hidden', v !== viewName)
+            );
+
+            // Auto-close sidebar on mobile when navigating
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
-            if (window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
+            if (window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
 
             document.querySelectorAll('.admin-nav-item').forEach(btn => {
-                if (btn.getAttribute('onclick')?.includes(viewName)) btn.classList.replace('text-gray-600', 'bg-green-600') || btn.classList.add('bg-green-600', 'text-white', 'shadow-lg');
-                else btn.classList.replace('bg-green-600', 'text-gray-600') || btn.classList.remove('bg-green-600', 'text-white', 'shadow-lg');
-                // Simplifying class toggle for brevity in logic, relying on CSS reset if needed, but manual classList management is safer:
-                if (btn.getAttribute('onclick')?.includes(viewName)) {
-                     btn.classList.add('bg-green-600', 'text-white', 'shadow-lg', 'shadow-green-600/30');
-                     btn.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:bg-green-50', 'dark:hover:bg-green-900/30');
+                const isCurrentView = btn.getAttribute('onclick')?.includes(viewName);
+                if (isCurrentView) {
+                    btn.classList.add('bg-green-600', 'text-white', 'shadow-lg', 'shadow-green-600/30');
+                    btn.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:bg-green-50', 'dark:hover:bg-green-900/30');
                 } else {
-                     btn.classList.remove('bg-green-600', 'text-white', 'shadow-lg', 'shadow-green-600/30');
-                     btn.classList.add('text-gray-600', 'dark:text-gray-300', 'hover:bg-green-50', 'dark:hover:bg-green-900/30');
+                    btn.classList.remove('bg-green-600', 'text-white', 'shadow-lg', 'shadow-green-600/30');
+                    btn.classList.add('text-gray-600', 'dark:text-gray-300', 'hover:bg-green-50', 'dark:hover:bg-green-900/30');
                 }
             });
 
-            if (viewName === 'livestock') { document.getElementById('livestock-search-input').value = ''; renderLivestock(''); }
-            if (viewName === 'orders') { document.getElementById('order-search-input').value = ''; renderOrders(''); }
-            if (viewName === 'customers') { document.getElementById('customer-search-input').value = ''; renderCustomers(''); }
+             if (viewName === 'livestock') {
+                 const searchInput = document.getElementById('livestock-search-input');
+                 if (searchInput) searchInput.value = '';
+                 renderLivestock('');
+             }
+            
+            if (viewName === 'orders') {
+                const searchInput = document.getElementById('order-search-input');
+                if (searchInput) searchInput.value = '';
+                renderOrders('');
+            }
+            
+            if (viewName === 'customers') {
+                const searchInput = document.getElementById('customer-search-input');
+                if (searchInput) searchInput.value = '';
+                renderCustomers('');
+            }
+            
             if (viewName === 'settings') updateNotificationPreviews();
+
             lucide.createIcons();
         }
-        
-        function searchLivestock() { renderLivestock(document.getElementById('livestock-search-input').value); }
-        function searchOrders() { renderOrders(document.getElementById('order-search-input').value); }
-        function searchCustomers() { renderCustomers(document.getElementById('customer-search-input').value); }
 
         async function saveLivestock(isEdit, id) {
+            const name = document.getElementById('new-name').value;
+            const type = document.getElementById('new-type').value;
+            const breed = document.getElementById('new-breed').value;
+            const weight = document.getElementById('new-weight').value;
+            const price = parseFloat(document.getElementById('new-price').value);
+            const status = document.getElementById('new-status').value;
+            const tags = document.getElementById('new-tags').value.trim();
+
+            if (!name || !type || !breed || !weight || isNaN(price) || !status) {
+                showToast("All required fields must be filled and price must be a number.", "warning");
+                return;
+            }
+
             const formData = new FormData();
-            formData.append('name', document.getElementById('new-name').value);
-            formData.append('type', document.getElementById('new-type').value);
-            formData.append('breed', document.getElementById('new-breed').value);
-            const w = document.getElementById('new-weight').value;
-            formData.append('weight', w); formData.append('age', w + ' kg');
-            formData.append('price', document.getElementById('new-price').value);
-            formData.append('status', document.getElementById('new-status').value);
-            formData.append('tags', document.getElementById('new-tags').value);
-            if(document.getElementById('new-image').files[0]) formData.append('image', document.getElementById('new-image').files[0]);
+            formData.append('name', name);
+            formData.append('type', type);
+            formData.append('breed', breed);
+            formData.append('weight', weight);
+            formData.append('age', weight + ' kg'); 
+            formData.append('price', price);
+            formData.append('status', status);
+            formData.append('tags', tags);
+
+            const imageFile = document.getElementById('new-image').files[0];
+            if (imageFile) formData.append('image', imageFile);
 
             try {
-                const res = await fetch(`${API_URL}/admin/livestock${isEdit ? '/' + id : ''}`, { method: isEdit ? 'PUT' : 'POST', body: formData });
-                if (!res.ok) throw new Error('Failed');
-                closeLivestockModal(); await loadData(lastViewedRoute); showToast(`Livestock ${isEdit ? 'updated' : 'added'}`, "success");
-            } catch (e) { showToast('Error saving livestock', 'error'); }
+                const btn = document.getElementById('save-livestock-btn');
+                const originalText = btn.innerText;
+                btn.innerText = "Saving...";
+                btn.disabled = true;
+
+                const url = `${API_URL}/admin/livestock${isEdit ? `/${id}` : ''}`;
+                const method = isEdit ? 'PUT' : 'POST';
+                const res = await fetch(url, { method, body: formData });
+                
+                if (!res.ok) throw new Error(`Failed to ${isEdit ? 'update' : 'add'} livestock`);
+                
+                closeLivestockModal();
+                document.querySelector('#livestock-modal form').reset();
+                
+                // AUTOMATIC LOAD - This ensures data updates immediately
+                await loadData(lastViewedRoute);
+                
+                showToast(`Livestock ${isEdit ? 'updated' : 'added'} successfully!`, "success");
+
+                btn.innerText = originalText;
+                btn.disabled = false;
+
+            } catch (error) {
+                console.error(`Error ${isEdit ? 'updating' : 'adding'} livestock:`, error);
+                showToast(`Error ${isEdit ? 'updating' : 'adding'} livestock.`, "error");
+                document.getElementById('save-livestock-btn').disabled = false;
+            }
         }
 
         async function removeItem(id) {
-            if (!confirm("Permanently remove?")) return;
-            try { await fetch(`${API_URL}/admin/livestock/${id}`, { method: 'DELETE' }); await loadData(lastViewedRoute); showToast("Removed", "success"); } catch (e) { showToast("Error", "error"); }
+            if (!confirm("Are you sure you want to permanently remove this item?")) return;
+            try {
+                const res = await fetch(`${API_URL}/admin/livestock/${id}`, { method: 'DELETE' });
+                if (res.status === 204) {
+                    await loadData(lastViewedRoute);
+                    showToast("Livestock removed successfully.", "success");
+                } else if (res.status === 404) {
+                    showToast("Livestock not found.", "warning");
+                } else {
+                    const data = await res.json();
+                    showToast(`Error: ${data.message || 'Server error'}`, "error");
+                }
+            } catch (error) {
+                console.error("Error removing livestock:", error);
+                showToast("Error removing livestock.", "error");
+            }
         }
 
         async function nextStatus(id, currentStatus) {
-            let next = currentStatus === 'Pending' || currentStatus === 'Processing' ? 'Shipped' : currentStatus === 'Shipped' ? 'Delivered' : null;
-            if (!next) return;
-            try { await fetch(`${API_URL}/admin/orders/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ status: next }) }); await loadData(lastViewedRoute); showToast(`Updated to ${next}`, "success"); } catch (e) { showToast("Error", "error"); }
+            let next = 'Processing';
+            if (currentStatus === 'Processing') next = 'Shipped';
+            else if (currentStatus === 'Shipped') next = 'Delivered';
+            else return;
+
+            try {
+                await fetch(`${API_URL}/admin/orders/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: next })
+                });
+                await loadData(lastViewedRoute);
+                showToast(`Order updated to ${next}`, "success");
+            } catch (error) {
+                console.error("Error updating order:", error);
+                showToast("Error updating order.", "error");
+            }
         }
 
-        // --- Notifications ---
+        // --- Notification Logic ---
         function addNotification(message, orderId, type = 'order') {
-            notifications.unshift({ message, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), orderId, type, read: false });
-            if (type === 'order') { seenOrderIds.add(orderId); localStorage.setItem('seenOrderIds', JSON.stringify([...seenOrderIds])); }
-            else if (type === 'cancel') { seenCancelledIds.add(orderId); localStorage.setItem('seenCancelledIds', JSON.stringify([...seenCancelledIds])); }
-            updateNotificationPreviews(); updateBell(); showToast(message, 'info');
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            notifications.unshift({ message, time, orderId, type, read: false });
+            if (type === 'order') {
+                seenOrderIds.add(orderId);
+                localStorage.setItem('seenOrderIds', JSON.stringify([...seenOrderIds]));
+            } else if (type === 'cancel') {
+                seenCancelledIds.add(orderId);
+                localStorage.setItem('seenCancelledIds', JSON.stringify([...seenCancelledIds]));
+            }
+            updateNotificationPreviews();
+            updateBell();
+            
+            // Also show a toast for real-time alerts
+            showToast(message, 'info');
         }
-        function removeNotification(i) { notifications.splice(i, 1); updateNotificationPreviews(); updateBell(); }
-        function clearAllNotifications() { notifications = []; updateNotificationPreviews(); document.getElementById('notification-list').innerHTML = '<p class="text-center text-gray-500 py-8">No notifications</p>'; updateBell(); }
-        function updateBell() { const b = document.getElementById('notification-badge'); const u = notifications.filter(n => !n.read).length; b.innerText = u; b.classList.toggle('hidden', u === 0); }
+
+        function removeNotification(index) {
+            notifications.splice(index, 1);
+            updateNotificationPreviews();
+            updateBell();
+        }
+
+        function clearAllNotifications() {
+            if (confirm("Clear all notifications?")) {
+                notifications = [];
+                updateNotificationPreviews();
+                const list = document.getElementById('notification-list');
+                if (list) list.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 py-8">No notifications</p>';
+                updateBell();
+            }
+        }
+
+        function updateBell() {
+            const badge = document.getElementById('notification-badge');
+            const unread = notifications.filter(n => !n.read).length;
+            badge.textContent = unread;
+            badge.classList.toggle('hidden', unread === 0);
+        }
+
         function updateNotificationPreviews() {
-            const list = (c, m) => {
-                if(!c) return;
-                c.innerHTML = notifications.length ? (m ? notifications : notifications.slice(0, 5)).map((n, i) => `
+            const previewContainer = document.getElementById('settings-notification-preview');
+            const modalList = document.getElementById('notification-list');
+
+            const isModalOpen = document.getElementById('notification-modal')?.style.display === 'flex';
+            if (isModalOpen) notifications.forEach(n => n.read = true);
+
+            const renderList = (container, isModal = false) => {
+                if (!container) return;
+                if (notifications.length === 0) {
+                    container.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400 py-8 text-sm">${isModal ? 'No notifications' : 'No new notifications'}</p>`;
+                    return;
+                }
+                const displayNotifications = isModal ? notifications : notifications.slice(0, 5);
+                container.innerHTML = displayNotifications.map((n, i) => `
                     <div class="p-3 rounded-xl ${n.read ? 'bg-gray-50 dark:bg-gray-700/50' : 'bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500'} flex justify-between items-start gap-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <div class="flex-1"><p class="font-medium text-sm ${n.read ? 'text-gray-700 dark:text-gray-300' : 'text-green-800 dark:text-green-300'}">${n.message}</p><p class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${n.time}</p></div>
-                        <button onclick="removeNotification(${i}); updateNotificationPreviews();" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
-                    </div>`).join('') : `<p class="text-center text-gray-500 dark:text-gray-400 py-8 text-sm">No notifications</p>`;
+                        <div class="flex-1">
+                            <p class="font-medium text-sm ${n.read ? 'text-gray-700 dark:text-gray-300' : 'text-green-800 dark:text-green-300'}">${n.message}</p>
+                            <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${n.time}</p>
+                        </div>
+                        <button onclick="removeNotification(${i}); updateNotificationPreviews();" 
+                                class="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `).join('');
                 lucide.createIcons();
             };
-            list(document.getElementById('settings-notification-preview'), false);
-            list(document.getElementById('notification-list'), true);
+
+            renderList(previewContainer, false);
+            renderList(modalList, true);
         }
-        function openNotificationModal() { document.getElementById('notification-modal').style.display = 'flex'; notifications.forEach(n => n.read = true); updateNotificationPreviews(); updateBell(); }
-        function closeNotificationModal() { document.getElementById('notification-modal').style.display = 'none'; }
+
+        function openNotificationModal() {
+            document.getElementById('notification-modal').style.display = 'flex';
+            updateNotificationPreviews();
+            lucide.createIcons();
+        }
+
+        function closeNotificationModal() {
+            document.getElementById('notification-modal').style.display = 'none';
+        }
+
         document.getElementById('bell-btn').onclick = openNotificationModal;
 
         async function checkForNewOrders() {
@@ -981,28 +1252,38 @@
                 const data = await res.json();
                 const currentOrders = data.orders || [];
                 const currentOrderIds = new Set(currentOrders.map(o => o._id));
+
                 for (const order of currentOrders) {
                     const id = order._id;
-                    const status = order.status;
+                    const currentStatus = order.status;
+
                     if (!previousOrderIds.has(id)) {
-                        if ((status === 'Pending' || status === 'Processing') && !seenOrderIds.has(id)) addNotification(`New Order #${id.slice(-6)}: ${formatINR(order.total)}`, id, 'order');
+                        if ((currentStatus === 'Pending' || currentStatus === 'Processing') && !seenOrderIds.has(id)) {
+                            addNotification(`New Order #${id.slice(-6)}: ${formatINR(order.total)}`, id, 'order');
+                        }
                     } else {
-                        const prev = previousStatuses.get(id);
-                        if (prev !== status && status === 'Cancelled' && !seenCancelledIds.has(id)) addNotification(`Order #${id.slice(-6)} Cancelled`, id, 'cancel');
+                        const prevStatus = previousStatuses.get(id);
+                        if (prevStatus !== currentStatus && currentStatus === 'Cancelled' && !seenCancelledIds.has(id)) {
+                            addNotification(`Order #${id.slice(-6)} Cancelled`, id, 'cancel');
+                        }
                     }
-                    previousStatuses.set(id, status);
+                    previousStatuses.set(id, currentStatus);
                 }
                 previousOrderIds = currentOrderIds;
                 localStorage.setItem('previousOrderIds', JSON.stringify([...previousOrderIds]));
                 localStorage.setItem('previousStatuses', JSON.stringify([...previousStatuses.entries()]));
-            } catch (e) { console.error(e); }
+            } catch (err) {
+                console.error("Error checking orders:", err);
+            }
         }
-        setInterval(checkForNewOrders, 5000);
+
+        setInterval(checkForNewOrders, 2000);
+        checkForNewOrders();
 
         document.addEventListener('DOMContentLoaded', () => {
-            const init = localStorage.getItem('lastViewedRoute') || 'dashboard';
-            document.getElementById(`admin-view-${init}`)?.classList.remove('hidden');
-            loadData(init);
+            const initialRoute = localStorage.getItem('lastViewedRoute') || 'dashboard';
+            document.getElementById(`admin-view-${initialRoute}`)?.classList.remove('hidden');
+            loadData(initialRoute);
         });
     </script>
 </body>
