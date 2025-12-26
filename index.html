@@ -346,7 +346,7 @@
         let customers = [];
         let lastViewedRoute = localStorage.getItem('lastViewedRoute') || 'dashboard';
         
-        const API_URL = 'https://goat-user-new.vercel.app/';
+        const API_URL = 'https://goat-user-new.vercel.app/api';
         
         let seenOrderIds = new Set(JSON.parse(localStorage.getItem('seenOrderIds') || '[]'));
         let seenCancelledIds = new Set(JSON.parse(localStorage.getItem('seenCancelledIds') || '[]'));
@@ -1064,3 +1064,4 @@
     </script>
 </body>
 </html>
+
