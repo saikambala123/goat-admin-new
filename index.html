@@ -89,6 +89,10 @@
             <button onclick="adminRouter('customers')" class="admin-nav-item w-full flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all duration-200 group">
                 <i data-lucide="users" class="w-5 h-5"></i> Customers
             </button>
+            <button onclick="adminRouter('uploads')" class="admin-nav-item w-full flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all duration-200 group">
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i> Uploads
+            </button>
+
             <button onclick="adminRouter('settings')" class="admin-nav-item w-full flex items-center gap-3 px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all duration-200 group">
                 <i data-lucide="settings" class="w-5 h-5"></i> Settings
             </button>
@@ -282,7 +286,82 @@
                 </div>
             </div>
 
-            <div id="admin-view-settings" class="hidden space-y-6 animate-fade-in-up">
+            
+
+            <div id="admin-view-uploads" class="hidden space-y-6 animate-fade-in-up">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">About Section Uploads</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">These uploads replace the moving images and video in the user app About section.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">About Video</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Key: about_video</p>
+                        <div class="mt-4 space-y-3">
+                            <input type="file" id="file-about_video" accept="video/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"> 
+                            <button onclick="uploadBanner('about_video','video','file-about_video')" class="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"> <i data-lucide="upload"></i> Upload</button>
+                        </div>
+                    </div>
+        
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Logo Banner (Image 1)</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Key: about_img1</p>
+                        <div class="mt-4 space-y-3">
+                            <input type="file" id="file-about_img1" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"> 
+                            <button onclick="uploadBanner('about_img1','image','file-about_img1')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"> <i data-lucide="upload"></i> Upload</button>
+                        </div>
+                    </div>
+        
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Ram on Roof (Image 2)</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Key: about_img2</p>
+                        <div class="mt-4 space-y-3">
+                            <input type="file" id="file-about_img2" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"> 
+                            <button onclick="uploadBanner('about_img2','image','file-about_img2')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"> <i data-lucide="upload"></i> Upload</button>
+                        </div>
+                    </div>
+        
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Market Scene (Image 3)</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Key: about_img3</p>
+                        <div class="mt-4 space-y-3">
+                            <input type="file" id="file-about_img3" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"> 
+                            <button onclick="uploadBanner('about_img3','image','file-about_img3')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"> <i data-lucide="upload"></i> Upload</button>
+                        </div>
+                    </div>
+        
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Mega Sale Ram (Image 4)</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Key: about_img4</p>
+                        <div class="mt-4 space-y-3">
+                            <input type="file" id="file-about_img4" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"> 
+                            <button onclick="uploadBanner('about_img4','image','file-about_img4')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"> <i data-lucide="upload"></i> Upload</button>
+                        </div>
+                    </div>
+        
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Goats Eating (Image 5)</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Key: about_img5</p>
+                        <div class="mt-4 space-y-3">
+                            <input type="file" id="file-about_img5" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"> 
+                            <button onclick="uploadBanner('about_img5','image','file-about_img5')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"> <i data-lucide="upload"></i> Upload</button>
+                        </div>
+                    </div>
+        
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Sale Poster (Image 6)</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Key: about_img6</p>
+                        <div class="mt-4 space-y-3">
+                            <input type="file" id="file-about_img6" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"> 
+                            <button onclick="uploadBanner('about_img6','image','file-about_img6')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"> <i data-lucide="upload"></i> Upload</button>
+                        </div>
+                    </div>
+        
+                </div>
+            </div>
+<div id="admin-view-settings" class="hidden space-y-6 animate-fade-in-up">
                 <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
                      <div class="flex items-center justify-between mb-8">
                         <div class="flex items-center gap-3">
@@ -698,7 +777,7 @@
         }
 
         async function loadData(targetRoute = lastViewedRoute) {
-            ['dashboard', 'livestock', 'orders', 'customers', 'settings'].forEach(v => document.getElementById(`admin-view-${v}`)?.classList.toggle('hidden', v !== targetRoute));
+            ['dashboard', 'livestock', 'orders', 'customers', 'uploads', 'settings'].forEach(v => document.getElementById(`admin-view-${v}`)?.classList.toggle('hidden', v !== targetRoute));
             const isPulling = document.getElementById('pull-to-refresh').style.top === '20px';
             const mainContainer = document.querySelector('main .flex-1.overflow-y-auto');
             if (mainContainer && !document.getElementById('loading-overlay') && !isPulling) {
@@ -850,9 +929,9 @@
 
         function adminRouter(viewName) {
             lastViewedRoute = viewName; localStorage.setItem('lastViewedRoute', viewName);
-            const titles = { dashboard: 'Dashboard', livestock: 'Livestock', orders: 'Orders', customers: 'Customers', settings: 'Settings' };
+            const titles = { dashboard: 'Dashboard', livestock: 'Livestock', orders: 'Orders', customers: 'Customers', settings: 'Settings', uploads: 'Uploads' };
             document.getElementById('admin-page-title').innerText = titles[viewName];
-            ['dashboard', 'livestock', 'orders', 'customers', 'settings'].forEach(v => document.getElementById(`admin-view-${v}`)?.classList.toggle('hidden', v !== viewName));
+            ['dashboard', 'livestock', 'orders', 'customers', 'uploads', 'settings'].forEach(v => document.getElementById(`admin-view-${v}`)?.classList.toggle('hidden', v !== viewName));
             
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
@@ -972,6 +1051,29 @@
             loadData(init);
             fetchNotifications();
         });
-    </script>
+    
+
+        async function uploadBanner(name, type, inputId) {
+            const input = document.getElementById(inputId);
+            const file = input?.files?.[0];
+            if (!file) { alert('Please select a file first'); return; }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', name);
+            formData.append('type', type);
+
+            try {
+                const res = await fetch('/api/admin/banners', { method: 'POST', body: formData });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.message || 'Upload failed');
+                alert('Upload successful! Now open the User app About page to see changes.');
+                input.value = '';
+            } catch (err) {
+                console.error(err);
+                alert('Upload failed: ' + err.message);
+            }
+        }
+</script>
 </body>
 </html>
