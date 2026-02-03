@@ -977,3 +977,37 @@
     </script>
 </body>
 </html>
+
+<script>
+document.querySelectorAll('.carousel').forEach(carousel => {
+  const track = carousel.querySelector('.carousel-track');
+  const dots = carousel.querySelectorAll('.dot');
+  const count = Number(carousel.dataset.count);
+  let index = 0;
+  let startX = 0;
+  let timer;
+
+  function update() {
+    track.style.transform = `translate3d(-${index * 100}%,0,0)`;
+    dots.forEach((d,i)=>d.classList.toggle('active', i===index));
+  }
+
+  function autoSlide(){
+    timer=setInterval(()=>{ index=(index+1)%count; update(); },3000);
+  }
+
+  carousel.addEventListener('touchstart',e=>{
+    clearInterval(timer);
+    startX=e.touches[0].clientX;
+  });
+
+  carousel.addEventListener('touchend',e=>{
+    const diff=startX-e.changedTouches[0].clientX;
+    if(diff>50) index=Math.min(index+1,count-1);
+    if(diff<-50) index=Math.max(index-1,0);
+    update(); autoSlide();
+  });
+
+  autoSlide();
+});
+</script>
